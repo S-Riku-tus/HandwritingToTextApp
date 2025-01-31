@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手書きノート OCR</title>
+</head>
+<body>
+    <h2>手書きノートから文字を抽出</h2>
+    <input type="file" id="fileInput">
+    <button onclick="uploadImage()">アップロード</button>
+    <p id="result"></p>
+
+    <script>
+        async function uploadImage() {
+            const fileInput = document.getElementById("fileInput");
+            if (!fileInput.files.length) {
+                alert("画像を選択してください");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            const response = await fetch("http://127.0.0.1:8000/upload/", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+            document.getElementById("result").innerText = data.extracted_text;
+        }
+    </script>
+</body>
+</html>
