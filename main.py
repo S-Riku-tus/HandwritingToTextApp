@@ -1,10 +1,12 @@
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 import cv2
 import numpy as np
 import pytesseract
 from PIL import Image
+import pdfkit
 import io
 import markdown
 from fpdf import FPDF
@@ -15,6 +17,14 @@ pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tessera
 
 app = FastAPI()
 
+# CORS設定（フロントエンドとの通信を許可）
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
@@ -23,31 +33,34 @@ async def read_root():
     
 
 @app.post("/upload/")
-async def upload_image(file: UploadFile = File(...), output_format: str = Form("text")):
-    # 画像を読み込む
+async def upload_image(file: UploadFile = File(...), output_format: str = "text"):
     contents = await file.read()
     image = Image.open(io.BytesIO(contents))
 
     # OpenCVで前処理（グレースケール化）
     image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
 
-    # OCR でテキストを抽出
+    # OCR でテキストを抽出（日本語対応）
     text = pytesseract.image_to_string(image, lang="jpn")
 
-    # 出力形式に応じて処理
     if output_format == "markdown":
-        md_text = markdown.markdown(text)
-        return JSONResponse(content={"extracted_text": md_text})
+        markdown_text = f"# OCR抽出結果\n\n{text}"
+        with open("output.md", "w", encoding="utf-8") as md_file:
+            md_file.write(markdown_text)
+        return {"message": "Markdownに保存しました", "file": "output.md"}
+
     elif output_format == "pdf":
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.multi_cell(0, 10, text)
-        pdf_output = "output.pdf"
-        pdf.output(pdf_output)
-        return FileResponse(pdf_output, media_type='application/pdf', filename="output.pdf")
-    else:
-        return JSONResponse(content={"extracted_text": text})
+        pdf_path = "output.pdf"
+        pdfkit.from_string(text, pdf_path)
+        return {"message": "PDFに保存しました", "file": pdf_path}
+
+    return {"extracted_text": text}
+
+# サーバー起動
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)
+
 
 # サーバー起動
 if __name__ == "__main__":

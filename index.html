@@ -4,20 +4,69 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>手書きノート OCR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h2>手書きノートから文字を抽出</h2>
-    <input type="file" id="fileInput">
-    <button onclick="uploadImage()">アップロード</button>
-    <p id="result"></p>
+<body class="bg-gray-100 flex flex-col items-center py-10">
+    <h2 class="text-2xl font-bold mb-4">手書きノートから文字を抽出</h2>
+    <div id="dropZone" class="w-3/4 max-w-lg border-2 border-dashed border-gray-400 p-6 text-center bg-white shadow-md rounded-lg transition-all hover:border-blue-500 hover:bg-blue-50">
+        <p id="dropText" class="text-gray-600">ここにファイルをドラッグ＆ドロップ</p>
+        <input type="file" id="fileInput" hidden>
+    </div>
+    <button onclick="document.getElementById('fileInput').click()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">ファイルを選択</button>
+    <p id="fileName" class="mt-2 text-gray-700"></p>
+    <button id="executeButton" class="mt-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition" disabled>実行</button>
+    <progress id="progress" value="0" max="100" class="w-full max-w-xs mt-4 hidden"></progress>
+    <p id="status" class="mt-2 text-gray-800">ファイルをアップロードしてください</p>
+    <div class="mt-4 p-4 bg-gray-200 rounded w-3/4 max-w-lg">
+        <h3 class="font-bold">出力結果</h3>
+        <p id="result" class="mt-2"></p>
+    </div>
 
     <script>
-        async function uploadImage() {
-            const fileInput = document.getElementById("fileInput");
+        const dropZone = document.getElementById("dropZone");
+        const fileInput = document.getElementById("fileInput");
+        const progress = document.getElementById("progress");
+        const status = document.getElementById("status");
+        const result = document.getElementById("result");
+        const fileName = document.getElementById("fileName");
+        const dropText = document.getElementById("dropText");
+        const executeButton = document.getElementById("executeButton");
+
+        dropZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropZone.classList.add("border-blue-500", "bg-blue-50");
+            dropText.classList.add("text-blue-500", "translate-y-1");
+        });
+
+        dropZone.addEventListener("dragleave", () => {
+            dropZone.classList.remove("border-blue-500", "bg-blue-50");
+            dropText.classList.remove("text-blue-500", "translate-y-1");
+        });
+
+        dropZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropZone.classList.remove("border-blue-500", "bg-blue-50");
+            fileInput.files = e.dataTransfer.files;
+            fileName.textContent = `選択されたファイル: ${fileInput.files[0].name}`;
+            executeButton.disabled = false;
+        });
+
+        fileInput.addEventListener("change", () => {
+            if (fileInput.files.length) {
+                fileName.textContent = `選択されたファイル: ${fileInput.files[0].name}`;
+                executeButton.disabled = false;
+            }
+        });
+
+        executeButton.addEventListener("click", async () => {
             if (!fileInput.files.length) {
                 alert("画像を選択してください");
                 return;
             }
+            
+            status.textContent = "処理中...";
+            progress.style.display = "block";
+            progress.value = 0;
 
             const formData = new FormData();
             formData.append("file", fileInput.files[0]);
@@ -28,8 +77,15 @@
             });
 
             const data = await response.json();
-            document.getElementById("result").innerText = data.extracted_text;
-        }
+            progress.value = 100;
+            
+            setTimeout(() => {
+                progress.style.display = "none";
+                status.textContent = "処理完了！新しいファイルを選択して実行できます。";
+            }, 500);
+            
+            result.textContent = data.extracted_text;
+        });
     </script>
 </body>
 </html>
