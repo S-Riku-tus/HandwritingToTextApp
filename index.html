@@ -8,20 +8,33 @@
 </head>
 <body class="bg-gray-100 flex flex-col items-center py-10">
     <h2 class="text-2xl font-bold mb-4">手書きノートから文字を抽出</h2>
+    
     <div id="dropZone" class="w-3/4 max-w-lg border-2 border-dashed border-gray-400 p-6 text-center bg-white shadow-md rounded-lg transition-all hover:border-blue-500 hover:bg-blue-50">
         <p id="dropText" class="text-gray-600">ここにファイルをドラッグ＆ドロップ</p>
         <input type="file" id="fileInput" hidden>
     </div>
+    
     <button onclick="document.getElementById('fileInput').click()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">ファイルを選択</button>
     <p id="fileName" class="mt-2 text-gray-700"></p>
+    
+    <label for="formatSelect" class="mt-4 text-gray-700">出力形式を選択：</label>
+    <select id="formatSelect" class="mt-2 p-2 border rounded-lg">
+        <option value="txt">TXT</option>
+        <option value="csv">CSV</option>
+        <option value="docx">Word</option>
+    </select>
+    
     <button id="executeButton" class="mt-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition" disabled>実行</button>
     <progress id="progress" value="0" max="100" class="w-full max-w-xs mt-4 hidden"></progress>
     <p id="status" class="mt-2 text-gray-800">ファイルをアップロードしてください</p>
+    
     <div class="mt-4 p-4 bg-gray-200 rounded w-3/4 max-w-lg">
-        <h3 class="font-bold">出力結果</h3>
-        <p id="result" class="mt-2"></p>
+        <h3 class="font-bold">出力結果（編集可能）</h3>
+        <textarea id="result" class="mt-2 w-full h-40 p-2 border rounded-lg"></textarea>
     </div>
-
+    
+    <button id="exportButton" class="mt-4 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition" disabled>エクスポート</button>
+    
     <script>
         const dropZone = document.getElementById("dropZone");
         const fileInput = document.getElementById("fileInput");
@@ -31,6 +44,8 @@
         const fileName = document.getElementById("fileName");
         const dropText = document.getElementById("dropText");
         const executeButton = document.getElementById("executeButton");
+        const exportButton = document.getElementById("exportButton");
+        const formatSelect = document.getElementById("formatSelect");
 
         dropZone.addEventListener("dragover", (e) => {
             e.preventDefault();
@@ -70,6 +85,7 @@
 
             const formData = new FormData();
             formData.append("file", fileInput.files[0]);
+            formData.append("format", formatSelect.value);
 
             const response = await fetch("http://127.0.0.1:8000/upload/", {
                 method: "POST",
@@ -82,9 +98,20 @@
             setTimeout(() => {
                 progress.style.display = "none";
                 status.textContent = "処理完了！新しいファイルを選択して実行できます。";
+                exportButton.disabled = false;
             }, 500);
             
-            result.textContent = data.extracted_text;
+            result.value = data.extracted_text;
+        });
+        
+        exportButton.addEventListener("click", () => {
+            const blob = new Blob([result.value], { type: "text/plain" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `ocr_output.${formatSelect.value}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         });
     </script>
 </body>
