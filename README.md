@@ -16,3 +16,7 @@
 
 ## 📜 ライセンス
 MIT License
+
+## 実行方法
+1. venv\Scripts\activate
+2. uvicorn main:app --reload
